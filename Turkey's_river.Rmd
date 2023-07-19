@@ -1,0 +1,219 @@
+---
+title: "r_final_odev"
+output: html_document
+date: "2023-01-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Q1
+```{r}
+set.seed(1000000)
+size <- 100000
+takim <- c("Besiktas","Fenerbahce","Galatasaray","Other","Trabzonspor")
+age <- sample(c(18:25),size,replace=T)
+table(age)
+mean(age)
+team <- sample(takim, size, replace=T, prob=c(0.25,0.25,0.25,0.15,0.10))
+table(team)
+prop.table(table(team))
+rating <- sample(1:5, size, replace=T)
+table(rating)
+income <- sample(seq(3000,10000,by=100),size,replace=T)
+mean(income)
+
+Q1 <- cbind(age, team, rating, income)
+Q1 <-as.data.frame(Q1)
+Q1
+```
+
+Q2
+```{r}
+library(dplyr)
+
+a <- 1:100
+a <- as.vector(a)
+b <- c(rep("m",30), rep("n",10), rep("p",20), rep("r",30),rep("s",10))
+veri <- split(a,b)
+
+c(veri[[1]][sample(1:30,1)], veri[[2]][sample(1:10,1)], veri[[3]][sample(1:20,1)], veri[[4]][sample(1:30,1)], veri[[5]][sample(1:10,1)])
+
+Q2 <- Q1 %>% mutate(grade = case_when(
+  team == "Fenerbahce" & (rating==4|rating==5) ~ sample(c(veri[[1]][sample(1:30,1)], veri[[2]][sample(1:10,1)], veri[[3]][sample(1:20,1)], veri[[4]][sample(1:30,1)], veri[[5]][sample(1:10,1)]),100000,prob = c(0,0.01,0.3,0.6,0.09), replace=T), 
+              team== "Fenerbahce" & (rating==1|rating==2|rating==3)~ sample(c(veri[[1]][sample(1:30,1)], veri[[2]][sample(1:10,1)], veri[[3]][sample(1:20,1)], veri[[4]][sample(1:30,1)], veri[[5]][sample(1:10,1)]),100000, prob=c(0.3,0.2,0.2,0.3,0),replace = T), 
+              team != "Fenerbahce"& (rating==4|rating==5)~sample(c(veri[[1]][sample(1:30,1)], veri[[2]][sample(1:10,1)], veri[[3]][sample(1:20,1)], veri[[4]][sample(1:30,1)], veri[[5]][sample(1:10,1)]),100000, prob= c(0.3,0.1,0.2,0.3,0.1),replace=T),
+              team !="Fenerbahce"&(rating==1|rating==2|rating==3)~sample(c(veri[[1]][sample(1:30,1)], veri[[2]][sample(1:10,1)], veri[[3]][sample(1:20,1)], veri[[4]][sample(1:30,1)], veri[[5]][sample(1:10,1)]), 100000, prob= c(0.6,0.1,0.3,0,0),replace=T)))
+
+Q2
+```
+
+Q3
+```{r}
+options(dplyr.summarise.inform = FALSE)
+Q3 <- Q2 %>% select(team,rating,grade) %>%
+  group_by(team,rating) %>%
+  summarise(grade_mean = mean(grade)) %>%
+  arrange(-grade_mean) %>%
+  mutate_if(is.numeric,round,2)
+Q3
+```
+
+Q4
+```{r}
+library(tidyr)
+library(ggplot2)
+
+Q4 <- Q2 %>% select(team, rating, grade) %>%
+  group_by(team,rating) %>%
+  summarise(grade_mean = mean(grade)) %>%
+  gather(key =takim, value = Team_Name, -c(rating,grade_mean)) %>%
+  mutate_if(is.numeric,round,2) %>%
+  ggplot(aes(x=Team_Name, y=grade_mean, fill=rating))+
+  geom_col(position = position_dodge())+
+  geom_text(aes(label=grade_mean), position = position_dodge(0.9),vjust = -0.4, size=1.9)+
+  scale_x_discrete("Team Name")+
+  scale_y_discrete("Average Grade")+
+  scale_fill_manual("Rating Level",values=c("#2E8B57", "#2E688B", "#8B2E43", "#D8D92F", "#2FD9C6"))
+
+Q4
+```
+
+"Second Part"
+Q5
+```{r}
+library(tidyr)
+library(dplyr)
+
+r <- read.csv("C:/Users/benay/Documents/proje/data.csv", sep = ";", stringsAsFactors=FALSE, fileEncoding="latin1")
+r
+
+r$X[r$X == ""] <- NA
+r <- r %>% fill(X)
+
+r$X.1[r$X.1 == ""] <- NA
+r <- r %>% filter(is.na(X.1))
+
+r$Parameter[r$Parameter==""] <- NA
+r <- r %>% filter(r$Parameter != is.na(Parameter))
+
+colnames(r)[1] <- "Station_Name"
+
+r
+```
+
+Q6
+```{r}
+library(lubridate)
+
+r$Year <- ymd(r$Year, truncated = 2L)
+
+r
+```
+
+Q7
+```{r}
+r <- r %>% complete(Year = seq.Date(min(Year), max(Year), by = "year"), Parameter) %>%
+  fill(Station_Name, .direction = "up") %>%
+  arrange(Station_Name, Parameter)
+
+(r %>% as.data.frame())[1:30,2:10]
+(r %>% as.data.frame())[31:60,2:10]
+```
+
+Q8
+```{r}
+r <- separate(r, col = Station_Name, into = c("Station_Code","Station_Name"),sep = ";")
+
+r %>% as.data.frame() %>% head(10)
+```
+
+Q9
+```{r}
+r <- r %>% pivot_longer(X1:X12, names_to = "Month", values_to = "Value")
+
+r
+```
+
+Q10
+```{r}
+library(stringr)
+
+r$Month <- str_sub(r$Month, 2,3)
+r$Month <- as.numeric(r$Month)
+r$Year<-factor(format(r$Year, '%Y'))
+
+r$Year_Month <- str_c(r$Year, "-",r$Month)
+
+library(zoo)
+r$Year_Month <- as.yearmon(r$Year_Month)
+r$Year_Month <- as.Date(r$Year_Month)
+r
+```
+
+Q11
+```{r}
+r <- r %>% pivot_wider(names_from = Parameter, values_from = Value) %>%
+  arrange(Station_Code)
+
+r %>% as.data.frame() %>% head(4)
+```
+
+Q12
+```{r}
+Q12 <- r %>% select(Station_Name, BOD5) %>%
+  group_by(Station_Name) %>%
+  summarise(mean_BOD5 = mean(BOD5, na.rm=T), sd_BOD5 = sd(BOD5, na.rm=T), min_BOD5 = min(BOD5, na.rm = T), max_BOD5 = max(BOD5, na.rm=T))
+
+Q12
+```
+
+Q13
+```{r}
+Q13 <- r %>% group_by(Station_Code,Station_Name) %>%
+  summarise(across(c(BOD5, `Ca++` , `Cl-`, Cu, DO, EC, Fe, `Mg++` , `Na+`), list(mean=mean, sd=sd, min=min, max=max), na.rm=TRUE))
+
+Q13 %>% as.data.frame %>% head(4)
+```
+
+Q14
+```{r}
+library(ggplot2)
+
+df <- r %>% group_by(Station_Name,Station_Code, Year) %>%
+  summarise(across(c(`Ca++` , `Cl-`, EC), list(Mean=mean), na.rm=TRUE))
+
+df %>% select(`Ca++_Mean`, `Cl-_Mean`, EC_Mean, Station_Code, Year)%>%
+  filter(Station_Code== "Station No: 01-11-00-001" | Station_Code=="Station No: 01-11-00-002" | Station_Code == "Station No: 01-11-00-003"| Station_Code == "Station No: 01-11-00-004" | Station_Code == "Station No: 01-11-00-008" | Station_Code == "Station No: 01-11-00-009") %>%
+  gather(key = parameters, value = deger, 2:4) %>%
+  ggplot(aes(Year, group = 1))+
+  geom_line(size = 1,aes(y = deger,color = Station_Code))+
+  scale_linetype_manual(values = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"))+
+  facet_wrap(~parameters,scales = "free" , nrow = 1)+
+  ggtitle("The change of Ca++, Cl− and EC for 6 different stations")+
+  xlab("Year") +
+  ylab("Parameter Value")+
+  theme_minimal()+theme(axis.text.x = element_text(angle = 90, size = 4.9, hjust = 0.5, vjust = 0.2))
+```
+
